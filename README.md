@@ -43,7 +43,7 @@ A full-stack web application for team project management with role-based access 
 | ORM | Prisma |
 | Auth | JWT + bcrypt |
 | Frontend | Vanilla HTML/CSS/JS |
-| Deployment | Railway |
+| Deployment | Render |
 
 ---
 
@@ -162,15 +162,20 @@ Open http://localhost:3000 in your browser.
 
 ---
 
-## 🚢 Railway Deployment
+## 🚢 Render Deployment
 
 1. Push your code to GitHub
-2. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub**
-3. Add a **PostgreSQL** database from the Railway dashboard
-4. Railway auto-injects `DATABASE_URL`. Add these env vars:
+2. Go to [render.com](https://render.com) → **Dashboard** → **New PostgreSQL** to create a database instance.
+3. Copy the internal database URL provided by Render.
+4. Go to **New Web Service** → **Build and deploy from a Git repository**.
+5. Connect your GitHub repository.
+6. Configure the following build/start commands:
+   - **Build Command:** `npm install && npx prisma generate && npx prisma db push --accept-data-loss`
+   - **Start Command:** `npm start`
+7. Add the following **Environment Variables**:
+   - `DATABASE_URL` — your PostgreSQL connection string
    - `JWT_SECRET` — a strong random secret
-   - `PORT` — Railway sets this automatically
-5. Deploy — Railway auto-detects the `Procfile` and runs migrations on startup
+8. Deploy — Render will automatically build the app and run the database migrations on startup.
 
 ---
 
