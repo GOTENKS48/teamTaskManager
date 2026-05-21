@@ -1,7 +1,109 @@
 /**
  * Project page logic — Task board, member management, task CRUD
+ * with custom multi-select assignee dropdown
  */
 let projectId, projectData, myRole, allTasks = [], members = [];
+
+// ─── Multi-Select Dropdown Component ─────────────────────────────────────────
+
+const multiSelectState = {};
+
+function initMultiSelect(containerId, options, selectedIds = []) {
+  multiSelectState[containerId] = { options, selected: new Set(selectedIds) };
+  renderMultiSelectDropdown(containerId);
+  renderMultiSelectTags(containerId);
+}
+
+function toggleMultiSelect(containerId) {
+  const container = document.getElementById(containerId);
+  const trigger = container.querySelector('.multi-select-trigger');
+  const dropdown = container.querySelector('.multi-select-dropdown');
+  const isOpen = dropdown.classList.contains('open');
+
+  // Close all other open dropdowns
+  document.querySelectorAll('.multi-select-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.multi-select-trigger.open').forEach(t => t.classList.remove('open'));
+
+  if (!isOpen) {
+    dropdown.classList.add('open');
+    trigger.classList.add('open');
+  }
+}
+
+function renderMultiSelectDropdown(containerId) {
+  const state = multiSelectState[containerId];
+  const dropdown = document.getElementById(containerId).querySelector('.multi-select-dropdown');
+
+  if (!state.options.length) {
+    dropdown.innerHTML = '<div class="multi-select-empty">No team members available</div>';
+    return;
+  }
+
+  dropdown.innerHTML = state.options.map(opt => `
+    <div class="multi-select-option ${state.selected.has(opt.id) ? 'selected' : ''}"
+         onclick="toggleMultiOption(event, '${containerId}', '${opt.id}')">
+      <div class="check-box">${state.selected.has(opt.id) ? '✓' : ''}</div>
+      <div class="option-info">
+        <div class="option-name">${opt.name}</div>
+        <div class="option-email">${opt.email}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderMultiSelectTags(containerId) {
+  const state = multiSelectState[containerId];
+  const tagsContainer = document.getElementById(containerId).querySelector('.multi-select-tags');
+
+  if (state.selected.size === 0) {
+    tagsContainer.innerHTML = '<span class="multi-select-placeholder">Select members\u2026</span>';
+    return;
+  }
+
+  tagsContainer.innerHTML = Array.from(state.selected).map(id => {
+    const opt = state.options.find(o => o.id === id);
+    if (!opt) return '';
+    return `<span class="multi-select-tag">
+      ${opt.name}
+      <span class="tag-remove" onclick="removeMultiOption(event, '${containerId}', '${id}')">&times;</span>
+    </span>`;
+  }).join('');
+}
+
+function toggleMultiOption(event, containerId, optionId) {
+  event.stopPropagation();
+  const state = multiSelectState[containerId];
+  if (state.selected.has(optionId)) {
+    state.selected.delete(optionId);
+  } else {
+    state.selected.add(optionId);
+  }
+  renderMultiSelectDropdown(containerId);
+  renderMultiSelectTags(containerId);
+}
+
+function removeMultiOption(event, containerId, optionId) {
+  event.stopPropagation();
+  const state = multiSelectState[containerId];
+  state.selected.delete(optionId);
+  renderMultiSelectDropdown(containerId);
+  renderMultiSelectTags(containerId);
+}
+
+function getMultiSelectValues(containerId) {
+  const state = multiSelectState[containerId];
+  return state ? Array.from(state.selected) : [];
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.multi-select-trigger.open').forEach(t => t.classList.remove('open'));
+  }
+});
+
+// ─── Page Init ───────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAuth()) return;
@@ -43,6 +145,8 @@ function renderProjectHeader() {
   document.title = `${projectData.name} — TaskFlow`;
 }
 
+// ─── Task Board ──────────────────────────────────────────────────────────────
+
 function renderTaskBoard() {
   const cols = { TODO: [], IN_PROGRESS: [], DONE: [] };
   allTasks.forEach(t => { if (cols[t.status]) cols[t.status].push(t); });
@@ -59,19 +163,34 @@ function renderTaskBoard() {
 
     container.innerHTML = cols[status].map(t => {
       const dueCls = t.dueDate && isOverdue(t.dueDate) && t.status !== 'DONE' ? 'overdue' : '';
+
+      // Build assignee chips with full names
+      let assigneeHtml;
+      if (t.assignees && t.assignees.length > 0) {
+        assigneeHtml = '<div class="assignee-chips">' +
+          t.assignees.map(a => `<span class="assignee-chip">
+            <span class="user-avatar">${userInitials(a.name)}</span>
+            ${a.name}
+          </span>`).join('') + '</div>';
+      } else {
+        assigneeHtml = '<span class="task-card-assignee text-muted">Unassigned</span>';
+      }
+
       return `<div class="task-card" onclick="openTaskDetail('${t.id}')">
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">
           <div class="task-card-title">${t.title}</div>
           ${priorityBadge(t.priority)}
         </div>
         <div class="task-card-meta">
-          ${t.assignees && t.assignees.length > 0 ? `<div style="display:flex;gap:0.25rem">` + t.assignees.map(a => `<span class="task-card-assignee" title="${a.name}"><span class="user-avatar" style="width:20px;height:20px;font-size:0.6rem">${userInitials(a.name)}</span></span>`).join('') + `</div>` : '<span class="task-card-assignee text-muted">Unassigned</span>'}
-          ${t.dueDate ? `<span class="task-card-due ${dueCls}">${formatDate(t.dueDate)}</span>` : ''}
+          ${assigneeHtml}
         </div>
+        ${t.dueDate ? `<div style="margin-top:0.35rem"><span class="task-card-due ${dueCls}">📅 ${formatDate(t.dueDate)}</span></div>` : ''}
       </div>`;
     }).join('');
   });
 }
+
+// ─── Members Tab ─────────────────────────────────────────────────────────────
 
 function renderMembers() {
   const container = document.getElementById('members-list');
@@ -117,7 +236,20 @@ async function openTaskDetail(taskId) {
   document.getElementById('task-detail-status').innerHTML = statusBadge(task.status);
   document.getElementById('task-detail-priority').innerHTML = priorityBadge(task.priority);
   document.getElementById('task-detail-due').textContent = task.dueDate ? formatDate(task.dueDate) : 'No due date';
-  document.getElementById('task-detail-assignee').textContent = task.assignees && task.assignees.length > 0 ? task.assignees.map(a => a.name).join(', ') : 'Unassigned';
+
+  // Show assignees as full names
+  const assigneeEl = document.getElementById('task-detail-assignee');
+  if (task.assignees && task.assignees.length > 0) {
+    assigneeEl.innerHTML = task.assignees.map(a =>
+      `<span class="assignee-chip" style="margin-right:0.25rem">
+        <span class="user-avatar">${userInitials(a.name)}</span>
+        ${a.name}
+      </span>`
+    ).join('');
+  } else {
+    assigneeEl.textContent = 'Unassigned';
+  }
+
   document.getElementById('task-detail-created').textContent = `Created by ${task.createdBy.name} · ${formatRelative(task.createdAt)}`;
 
   // Status change buttons
@@ -176,12 +308,13 @@ async function deleteTask(taskId) {
 
 // ─── Create Task ─────────────────────────────────────────────────────────────
 
+function getMemberOptions() {
+  return members.map(m => ({ id: m.userId, name: m.user.name, email: m.user.email }));
+}
+
 function openCreateTask() {
-  // Populate assignee dropdown
-  const sel = document.getElementById('task-assignee');
-  sel.innerHTML = '<option value="">Unassigned</option>' +
-    members.map(m => `<option value="${m.userId}">${m.user.name}</option>`).join('');
   document.getElementById('create-task-form').reset();
+  initMultiSelect('create-assignee-select', getMemberOptions(), []);
   openModal('create-task-modal');
 }
 
@@ -190,12 +323,13 @@ document.getElementById('create-task-form')?.addEventListener('submit', async (e
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {
+    const assigneeIds = getMultiSelectValues('create-assignee-select');
     const body = {
       title: document.getElementById('task-title').value.trim(),
       description: document.getElementById('task-desc').value.trim(),
       priority: document.getElementById('task-priority').value,
       dueDate: document.getElementById('task-due').value || undefined,
-      assigneeIds: Array.from(document.getElementById('task-assignee').selectedOptions).map(opt => opt.value),
+      assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
     };
     await API.createTask(projectId, body);
     showToast('Task created!', 'success');
@@ -224,9 +358,9 @@ function openEditTask(taskId) {
   document.getElementById('edit-task-status').value = task.status;
   document.getElementById('edit-task-due').value = task.dueDate ? task.dueDate.split('T')[0] : '';
 
-  const sel = document.getElementById('edit-task-assignee');
-  const assigneeIds = task.assignees ? task.assignees.map(a => a.id) : [];
-  sel.innerHTML = members.map(m => `<option value="${m.userId}" ${assigneeIds.includes(m.userId) ? 'selected' : ''}>${m.user.name}</option>`).join('');
+  // Initialize multi-select with current assignees pre-selected
+  const currentIds = task.assignees ? task.assignees.map(a => a.id) : [];
+  initMultiSelect('edit-assignee-select', getMemberOptions(), currentIds);
 
   openModal('edit-task-modal');
 }
@@ -237,13 +371,14 @@ document.getElementById('edit-task-form')?.addEventListener('submit', async (e) 
   btn.disabled = true;
   try {
     const taskId = document.getElementById('edit-task-id').value;
+    const assigneeIds = getMultiSelectValues('edit-assignee-select');
     const body = {
       title: document.getElementById('edit-task-title').value.trim(),
       description: document.getElementById('edit-task-desc').value.trim(),
       priority: document.getElementById('edit-task-priority').value,
       status: document.getElementById('edit-task-status').value,
       dueDate: document.getElementById('edit-task-due').value || null,
-      assigneeIds: Array.from(document.getElementById('edit-task-assignee').selectedOptions).map(opt => opt.value),
+      assigneeIds: assigneeIds,
     };
     await API.updateTask(projectId, taskId, body);
     showToast('Task updated!', 'success');
