@@ -91,7 +91,7 @@ router.get('/', authenticate, requireProjectMember(), async (req, res, next) => 
     const tasks = await prisma.task.findMany({
       where,
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignees: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true, email: true } },
       },
       orderBy,
