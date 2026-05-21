@@ -21,9 +21,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function renderStats(data) {
   const container = document.getElementById('stats-grid');
-  const total = data.myTasks.total || 0;
-  const done = data.myTasks.DONE || 0;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const myTotal = data.myTasks.total || 0;
+  const myDone = data.myTasks.DONE || 0;
+  const myPct = myTotal > 0 ? Math.round((myDone / myTotal) * 100) : 0;
+
+  const allTotal = data.allTasks.total || 0;
+  const allDone = data.allTasks.DONE || 0;
+  const allPct = allTotal > 0 ? Math.round((allDone / allTotal) * 100) : 0;
+
   container.innerHTML = `
     <div class="stat-card fade-in-up">
       <div class="stat-icon">📁</div>
@@ -32,15 +37,25 @@ function renderStats(data) {
     </div>
     <div class="stat-card fade-in-up" style="animation-delay:0.05s">
       <div class="stat-icon">📋</div>
-      <div class="stat-value">${total}</div>
-      <div class="stat-label">My Tasks</div>
+      <div class="stat-value">${allTotal}</div>
+      <div class="stat-label">Total Tasks</div>
     </div>
     <div class="stat-card fade-in-up" style="animation-delay:0.1s">
-      <div class="stat-icon">✅</div>
-      <div class="stat-value">${pct}%</div>
-      <div class="stat-label">My Completion</div>
+      <div class="stat-icon">📈</div>
+      <div class="stat-value">${allPct}%</div>
+      <div class="stat-label">Total Completion</div>
     </div>
     <div class="stat-card fade-in-up" style="animation-delay:0.15s">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-value">${myTotal}</div>
+      <div class="stat-label">My Tasks</div>
+    </div>
+    <div class="stat-card fade-in-up" style="animation-delay:0.2s">
+      <div class="stat-icon">✅</div>
+      <div class="stat-value">${myPct}%</div>
+      <div class="stat-label">My Completion</div>
+    </div>
+    <div class="stat-card fade-in-up" style="animation-delay:0.25s">
       <div class="stat-icon">⚠️</div>
       <div class="stat-value">${data.overdueTasks.length}</div>
       <div class="stat-label">Project Overdue</div>
