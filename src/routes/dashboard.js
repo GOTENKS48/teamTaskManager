@@ -30,7 +30,7 @@ router.get('/', authenticate, async (req, res, next) => {
     const myTasksByStatus = await prisma.task.groupBy({
       by: ['status'],
       where: {
-        assignedToId: userId,
+        assignees: { some: { id: userId } },
         projectId: { in: projectIds },
       },
       _count: { id: true },
@@ -45,7 +45,7 @@ router.get('/', authenticate, async (req, res, next) => {
       },
       include: {
         project: { select: { id: true, name: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignees: { select: { id: true, name: true, email: true } },
       },
       orderBy: { dueDate: 'asc' },
       take: 10,
@@ -56,7 +56,7 @@ router.get('/', authenticate, async (req, res, next) => {
       where: { projectId: { in: projectIds } },
       include: {
         project: { select: { id: true, name: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignees: { select: { id: true, name: true, email: true } },
       },
       orderBy: { updatedAt: 'desc' },
       take: 10,

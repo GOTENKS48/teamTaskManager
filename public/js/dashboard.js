@@ -60,7 +60,7 @@ function renderOverdue(tasks) {
       <td style="color:var(--text-primary)">${t.title}</td>
       <td>${t.project.name}</td>
       <td><span class="badge badge-overdue">${formatDate(t.dueDate)}</span></td>
-      <td>${t.assignedTo ? t.assignedTo.name : '<span class="text-muted">Unassigned</span>'}</td>
+      <td>${t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.name).join(', ') : '<span class="text-muted">Unassigned</span>'}</td>
     </tr>`).join('')}</tbody>
   </table></div>`;
 }
