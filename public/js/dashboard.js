@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function renderStats(data) {
   const container = document.getElementById('stats-grid');
-  const total = data.allTasks.total || 0;
-  const done = data.allTasks.DONE || 0;
+  const total = data.myTasks.total || 0;
+  const done = data.myTasks.DONE || 0;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   container.innerHTML = `
     <div class="stat-card fade-in-up">
@@ -33,17 +33,17 @@ function renderStats(data) {
     <div class="stat-card fade-in-up" style="animation-delay:0.05s">
       <div class="stat-icon">📋</div>
       <div class="stat-value">${total}</div>
-      <div class="stat-label">Total Tasks</div>
+      <div class="stat-label">My Tasks</div>
     </div>
     <div class="stat-card fade-in-up" style="animation-delay:0.1s">
       <div class="stat-icon">✅</div>
       <div class="stat-value">${pct}%</div>
-      <div class="stat-label">Completed</div>
+      <div class="stat-label">My Completion</div>
     </div>
     <div class="stat-card fade-in-up" style="animation-delay:0.15s">
       <div class="stat-icon">⚠️</div>
       <div class="stat-value">${data.overdueTasks.length}</div>
-      <div class="stat-label">Overdue</div>
+      <div class="stat-label">Project Overdue</div>
     </div>
   `;
 }
