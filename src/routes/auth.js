@@ -1,10 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 const config = require('../config');
 const authenticate = require('../middleware/auth');
-const { signupValidator, loginValidator } = require('../validators/auth');
+const { signupValidator, loginValidator, forgotPasswordValidator, resetPasswordValidator } = require('../validators/auth');
 const { success, created, error } = require('../utils/apiResponse');
 
 const router = express.Router();
@@ -131,6 +132,96 @@ router.get('/me', authenticate, async (req, res, next) => {
     }
 
     return success(res, user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/auth/forgot-password ─────────────────────────────────────────
+
+router.post('/forgot-password', forgotPasswordValidator, async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: errors.array(),
+      });
+    }
+
+    const prisma = req.app.locals.prisma;
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return error(res, 'No account found with that email address.', 404);
+    }
+
+    // Generate a secure random token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Save to DB
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetExpires,
+      },
+    });
+
+    // In a real app, you would send an email here.
+    // For this assignment, we return the token directly so the frontend can demo the flow.
+    return success(res, { resetToken }, 'Password reset token generated. In production, this would be emailed to you.');
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/auth/reset-password ──────────────────────────────────────────
+
+router.post('/reset-password', resetPasswordValidator, async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed.',
+        errors: errors.array(),
+      });
+    }
+
+    const prisma = req.app.locals.prisma;
+    const { token, password } = req.body;
+
+    // Find user by token and check expiry
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      return error(res, 'Invalid or expired reset token.', 400);
+    }
+
+    // Hash the new password
+    const passwordHash = await bcrypt.hash(password, config.bcryptSaltRounds);
+
+    // Update password and clear reset fields
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    return success(res, null, 'Password has been reset successfully. You can now log in with your new password.');
   } catch (err) {
     next(err);
   }

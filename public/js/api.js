@@ -61,6 +61,8 @@ const API = {
   signup: (body) => api('/auth/signup', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => api('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: () => api('/auth/me'),
+  forgotPassword: (body) => api('/auth/forgot-password', { method: 'POST', body: JSON.stringify(body) }),
+  resetPassword: (body) => api('/auth/reset-password', { method: 'POST', body: JSON.stringify(body) }),
 
   // Projects
   getProjects: () => api('/projects'),
