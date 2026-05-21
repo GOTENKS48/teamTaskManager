@@ -65,7 +65,7 @@ function renderTaskBoard() {
           ${priorityBadge(t.priority)}
         </div>
         <div class="task-card-meta">
-          ${t.assignedTo ? `<span class="task-card-assignee"><span class="user-avatar" style="width:20px;height:20px;font-size:0.6rem">${userInitials(t.assignedTo.name)}</span>${t.assignedTo.name}</span>` : '<span class="task-card-assignee text-muted">Unassigned</span>'}
+          ${t.assignees && t.assignees.length > 0 ? `<div style="display:flex;gap:0.25rem">` + t.assignees.map(a => `<span class="task-card-assignee" title="${a.name}"><span class="user-avatar" style="width:20px;height:20px;font-size:0.6rem">${userInitials(a.name)}</span></span>`).join('') + `</div>` : '<span class="task-card-assignee text-muted">Unassigned</span>'}
           ${t.dueDate ? `<span class="task-card-due ${dueCls}">${formatDate(t.dueDate)}</span>` : ''}
         </div>
       </div>`;
@@ -107,7 +107,7 @@ async function openTaskDetail(taskId) {
 
   const user = getUser();
   const isAdmin = myRole === 'ADMIN';
-  const isAssignee = task.assignedToId === user.id;
+  const isAssignee = task.assignees && task.assignees.some(u => u.id === user.id);
   const canEdit = isAdmin;
   const canChangeStatus = isAdmin || isAssignee;
 
@@ -117,7 +117,7 @@ async function openTaskDetail(taskId) {
   document.getElementById('task-detail-status').innerHTML = statusBadge(task.status);
   document.getElementById('task-detail-priority').innerHTML = priorityBadge(task.priority);
   document.getElementById('task-detail-due').textContent = task.dueDate ? formatDate(task.dueDate) : 'No due date';
-  document.getElementById('task-detail-assignee').textContent = task.assignedTo ? task.assignedTo.name : 'Unassigned';
+  document.getElementById('task-detail-assignee').textContent = task.assignees && task.assignees.length > 0 ? task.assignees.map(a => a.name).join(', ') : 'Unassigned';
   document.getElementById('task-detail-created').textContent = `Created by ${task.createdBy.name} · ${formatRelative(task.createdAt)}`;
 
   // Status change buttons
@@ -195,7 +195,7 @@ document.getElementById('create-task-form')?.addEventListener('submit', async (e
       description: document.getElementById('task-desc').value.trim(),
       priority: document.getElementById('task-priority').value,
       dueDate: document.getElementById('task-due').value || undefined,
-      assignedToId: document.getElementById('task-assignee').value || undefined,
+      assigneeIds: Array.from(document.getElementById('task-assignee').selectedOptions).map(opt => opt.value),
     };
     await API.createTask(projectId, body);
     showToast('Task created!', 'success');
@@ -225,8 +225,8 @@ function openEditTask(taskId) {
   document.getElementById('edit-task-due').value = task.dueDate ? task.dueDate.split('T')[0] : '';
 
   const sel = document.getElementById('edit-task-assignee');
-  sel.innerHTML = '<option value="">Unassigned</option>' +
-    members.map(m => `<option value="${m.userId}" ${m.userId === task.assignedToId ? 'selected' : ''}>${m.user.name}</option>`).join('');
+  const assigneeIds = task.assignees ? task.assignees.map(a => a.id) : [];
+  sel.innerHTML = members.map(m => `<option value="${m.userId}" ${assigneeIds.includes(m.userId) ? 'selected' : ''}>${m.user.name}</option>`).join('');
 
   openModal('edit-task-modal');
 }
@@ -243,7 +243,7 @@ document.getElementById('edit-task-form')?.addEventListener('submit', async (e) 
       priority: document.getElementById('edit-task-priority').value,
       status: document.getElementById('edit-task-status').value,
       dueDate: document.getElementById('edit-task-due').value || null,
-      assignedToId: document.getElementById('edit-task-assignee').value || null,
+      assigneeIds: Array.from(document.getElementById('edit-task-assignee').selectedOptions).map(opt => opt.value),
     };
     await API.updateTask(projectId, taskId, body);
     showToast('Task updated!', 'success');

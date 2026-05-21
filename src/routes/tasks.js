@@ -22,18 +22,19 @@ router.post('/', authenticate, requireProjectMember('ADMIN'), createTaskValidato
 
     const prisma = req.app.locals.prisma;
     const projectId = req.params.id;
-    const { title, description, status, priority, dueDate, assignedToId } = req.body;
+    const { title, description, status, priority, dueDate, assigneeIds } = req.body;
 
-    // If assigning, verify assignee is a project member
-    if (assignedToId) {
-      const isMember = await prisma.projectMember.findUnique({
+    // If assigning, verify all assignees are project members
+    if (assigneeIds && assigneeIds.length > 0) {
+      const members = await prisma.projectMember.findMany({
         where: {
-          projectId_userId: { projectId, userId: assignedToId },
+          projectId,
+          userId: { in: assigneeIds },
         },
       });
 
-      if (!isMember) {
-        return error(res, 'The assigned user is not a member of this project.', 400);
+      if (members.length !== assigneeIds.length) {
+        return error(res, 'One or more assigned users are not members of this project.', 400);
       }
     }
 
@@ -45,11 +46,11 @@ router.post('/', authenticate, requireProjectMember('ADMIN'), createTaskValidato
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null,
         projectId,
-        assignedToId,
+        assignees: assigneeIds && assigneeIds.length > 0 ? { connect: assigneeIds.map(id => ({ id })) } : undefined,
         createdById: req.user.id,
       },
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignees: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true, email: true } },
       },
     });
@@ -72,7 +73,11 @@ router.get('/', authenticate, requireProjectMember(), async (req, res, next) => 
     const where = { projectId };
     if (status) where.status = status;
     if (priority) where.priority = priority;
-    if (assignedTo) where.assignedToId = assignedTo;
+    if (assignedTo) {
+      where.assignees = {
+        some: { id: assignedTo },
+      };
+    }
 
     // Build sort
     const orderBy = {};
@@ -110,7 +115,7 @@ router.get('/:taskId', authenticate, requireProjectMember(), async (req, res, ne
         projectId: req.params.id,
       },
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignees: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true, email: true } },
         project: { select: { id: true, name: true } },
       },
@@ -147,38 +152,40 @@ router.put('/:taskId', authenticate, requireProjectMember(), updateTaskValidator
     // Find the task
     const task = await prisma.task.findFirst({
       where: { id: taskId, projectId },
+      include: { assignees: true },
     });
 
     if (!task) {
       return error(res, 'Task not found.', 404);
     }
 
-    const { title, description, status, priority, dueDate, assignedToId } = req.body;
+    const { title, description, status, priority, dueDate, assigneeIds } = req.body;
 
     // Members can only update status of tasks assigned to them
     if (membership.role === 'MEMBER') {
-      const isAssignedToMe = task.assignedToId === req.user.id;
+      const isAssignedToMe = task.assignees.some(user => user.id === req.user.id);
 
       if (!isAssignedToMe) {
         return error(res, 'Members can only update tasks assigned to them.', 403);
       }
 
       // Members can only change status
-      if (title || description || priority || dueDate !== undefined || assignedToId !== undefined) {
+      if (title || description || priority || dueDate !== undefined || assigneeIds !== undefined) {
         return error(res, 'Members can only update task status.', 403);
       }
     }
 
-    // If re-assigning, verify assignee is a project member
-    if (assignedToId) {
-      const isMember = await prisma.projectMember.findUnique({
+    // If re-assigning, verify assignees are project members
+    if (assigneeIds && assigneeIds.length > 0) {
+      const members = await prisma.projectMember.findMany({
         where: {
-          projectId_userId: { projectId, userId: assignedToId },
+          projectId,
+          userId: { in: assigneeIds },
         },
       });
 
-      if (!isMember) {
-        return error(res, 'The assigned user is not a member of this project.', 400);
+      if (members.length !== assigneeIds.length) {
+        return error(res, 'One or more assigned users are not members of this project.', 400);
       }
     }
 
@@ -189,13 +196,17 @@ router.put('/:taskId', authenticate, requireProjectMember(), updateTaskValidator
     if (status !== undefined) updateData.status = status;
     if (priority !== undefined) updateData.priority = priority;
     if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
-    if (assignedToId !== undefined) updateData.assignedToId = assignedToId || null;
+    if (assigneeIds !== undefined) {
+      updateData.assignees = {
+        set: assigneeIds ? assigneeIds.map(id => ({ id })) : [],
+      };
+    }
 
     const updatedTask = await prisma.task.update({
       where: { id: taskId },
       data: updateData,
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignees: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true, email: true } },
       },
     });

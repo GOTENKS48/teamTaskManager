@@ -29,10 +29,12 @@ const createTaskValidator = [
     .isISO8601()
     .withMessage('Due date must be a valid ISO 8601 date.'),
 
-  body('assignedToId')
+  body('assigneeIds')
     .optional()
-    .isUUID()
-    .withMessage('Assigned user ID must be a valid UUID.'),
+    .isArray()
+    .withMessage('Assignees must be an array.')
+    .custom((ids) => ids.every((id) => typeof id === 'string' && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)))
+    .withMessage('All assignee IDs must be valid UUIDs.'),
 ];
 
 const updateTaskValidator = [
@@ -65,10 +67,12 @@ const updateTaskValidator = [
     .isISO8601()
     .withMessage('Due date must be a valid ISO 8601 date.'),
 
-  body('assignedToId')
+  body('assigneeIds')
     .optional({ values: 'null' })
-    .isUUID()
-    .withMessage('Assigned user ID must be a valid UUID.'),
+    .isArray()
+    .withMessage('Assignees must be an array.')
+    .custom((ids) => ids.every((id) => typeof id === 'string' && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)))
+    .withMessage('All assignee IDs must be valid UUIDs.'),
 ];
 
 module.exports = { createTaskValidator, updateTaskValidator };
