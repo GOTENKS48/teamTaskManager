@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Project — Manage tasks and team members.">
+  <title>Project — TaskFlow</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <nav class="navbar">
+      <a href="/dashboard.html" class="navbar-brand"><span class="icon">📋</span> TaskFlow</a>
+      <div class="navbar-actions">
+        <div class="navbar-user">
+          <div class="user-avatar" id="navbar-user-avatar">?</div>
+          <span id="navbar-user-name">User</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <!-- Project Header -->
+      <div style="margin-bottom:1.5rem">
+        <a href="/dashboard.html" style="font-size:0.825rem;color:var(--text-muted)">← Back to Dashboard</a>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.5rem">
+          <div>
+            <h1 id="project-name">Loading...</h1>
+            <p id="project-desc" class="text-muted" style="font-size:0.9rem;margin-top:0.25rem"></p>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-secondary admin-only" onclick="openModal('add-member-modal')">👥 Add Member</button>
+            <button class="btn btn-primary admin-only" onclick="openCreateTask()">+ New Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-item active" onclick="switchTab(this,'tab-board')">📋 Task Board</button>
+        <button class="tab-item" onclick="switchTab(this,'tab-members')">👥 Members</button>
+      </div>
+
+      <!-- Task Board Tab -->
+      <div class="tab-content active" id="tab-board">
+        <div class="task-board">
+          <div class="task-column">
+            <div class="task-column-header">
+              <span class="task-column-title" style="color:var(--info)">📋 To Do</span>
+              <span class="task-column-count" id="count-TODO">0</span>
+            </div>
+            <div id="col-TODO"></div>
+          </div>
+          <div class="task-column">
+            <div class="task-column-header">
+              <span class="task-column-title" style="color:var(--warning)">🔄 In Progress</span>
+              <span class="task-column-count" id="count-IN_PROGRESS">0</span>
+            </div>
+            <div id="col-IN_PROGRESS"></div>
+          </div>
+          <div class="task-column">
+            <div class="task-column-header">
+              <span class="task-column-title" style="color:var(--success)">✅ Done</span>
+              <span class="task-column-count" id="count-DONE">0</span>
+            </div>
+            <div id="col-DONE"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Members Tab -->
+      <div class="tab-content" id="tab-members">
+        <div class="card">
+          <div class="card-header"><h3>Team Members</h3></div>
+          <div id="members-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Detail Modal -->
+  <div class="modal-overlay" id="task-detail-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="task-detail-title"></h3>
+        <button class="modal-close" onclick="closeModal('task-detail-modal')">&times;</button>
+      </div>
+      <p id="task-detail-desc" style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem"></p>
+      <div style="display:flex;flex-wrap:wrap;gap:1rem;font-size:0.85rem;margin-bottom:0.5rem">
+        <div><span class="text-muted">Status: </span><span id="task-detail-status"></span></div>
+        <div><span class="text-muted">Priority: </span><span id="task-detail-priority"></span></div>
+        <div><span class="text-muted">Due: </span><span id="task-detail-due"></span></div>
+        <div><span class="text-muted">Assignee: </span><span id="task-detail-assignee"></span></div>
+      </div>
+      <div id="task-detail-created" class="text-muted" style="font-size:0.78rem"></div>
+      <div id="task-status-actions"></div>
+      <div id="task-admin-actions" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- Create Task Modal -->
+  <div class="modal-overlay" id="create-task-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Task</h3>
+        <button class="modal-close" onclick="closeModal('create-task-modal')">&times;</button>
+      </div>
+      <form id="create-task-form">
+        <div class="form-group"><label class="form-label">Title</label><input type="text" id="task-title" class="form-input" required></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea id="task-desc" class="form-textarea"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="form-group"><label class="form-label">Priority</label><select id="task-priority" class="form-select"><option value="LOW">Low</option><option value="MEDIUM" selected>Medium</option><option value="HIGH">High</option></select></div>
+          <div class="form-group"><label class="form-label">Due Date</label><input type="date" id="task-due" class="form-input"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Assign To</label><select id="task-assignee" class="form-select"></select></div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('create-task-modal')">Cancel</button><button type="submit" class="btn btn-primary">Create Task</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Task Modal -->
+  <div class="modal-overlay" id="edit-task-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Task</h3>
+        <button class="modal-close" onclick="closeModal('edit-task-modal')">&times;</button>
+      </div>
+      <form id="edit-task-form">
+        <input type="hidden" id="edit-task-id">
+        <div class="form-group"><label class="form-label">Title</label><input type="text" id="edit-task-title" class="form-input" required></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea id="edit-task-desc" class="form-textarea"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="form-group"><label class="form-label">Status</label><select id="edit-task-status" class="form-select"><option value="TODO">To Do</option><option value="IN_PROGRESS">In Progress</option><option value="DONE">Done</option></select></div>
+          <div class="form-group"><label class="form-label">Priority</label><select id="edit-task-priority" class="form-select"><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="form-group"><label class="form-label">Due Date</label><input type="date" id="edit-task-due" class="form-input"></div>
+          <div class="form-group"><label class="form-label">Assign To</label><select id="edit-task-assignee" class="form-select"></select></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('edit-task-modal')">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div class="modal-overlay" id="add-member-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Team Member</h3>
+        <button class="modal-close" onclick="closeModal('add-member-modal')">&times;</button>
+      </div>
+      <form id="add-member-form">
+        <div class="form-group"><label class="form-label">Email Address</label><input type="email" id="member-email" class="form-input" placeholder="teammate@example.com" required></div>
+        <div class="form-group"><label class="form-label">Role</label><select id="member-role" class="form-select"><option value="MEMBER">Member</option><option value="ADMIN">Admin</option></select></div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('add-member-modal')">Cancel</button><button type="submit" class="btn btn-primary">Add Member</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/project.js"></script>
+  <script>
+    function switchTab(btn, tabId) {
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+  </script>
+</body>
+</html>

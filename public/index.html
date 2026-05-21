@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Team Task Manager — Manage projects, assign tasks, track progress with role-based access control.">
+  <title>Team Task Manager — Sign In</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <h1>📋 TaskFlow</h1>
+        <p>Manage your team's work, together.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-form="login-section" id="login-tab">Sign In</button>
+        <button class="auth-tab" data-form="signup-section" id="signup-tab">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-section" class="auth-form active">
+        <form id="login-form">
+          <div class="form-group">
+            <label class="form-label" for="login-email">Email</label>
+            <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="login-password">Password</label>
+            <input type="password" id="login-password" class="form-input" placeholder="••••••••" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Sign In</button>
+        </form>
+      </div>
+
+      <!-- Signup Form -->
+      <div id="signup-section" class="auth-form">
+        <form id="signup-form">
+          <div class="form-group">
+            <label class="form-label" for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" class="form-input" placeholder="John Doe" required minlength="2">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Email</label>
+            <input type="email" id="signup-email" class="form-input" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-password">Password</label>
+            <input type="password" id="signup-password" class="form-input" placeholder="Min 6 characters" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
